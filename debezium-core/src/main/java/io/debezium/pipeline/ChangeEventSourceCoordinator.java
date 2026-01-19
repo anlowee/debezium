@@ -347,6 +347,12 @@ public class ChangeEventSourceCoordinator<P extends Partition, O extends OffsetC
                 .getIncrementalSnapshotChangeEventSource(offsetContext, snapshotMetrics, snapshotMetrics, notificationService);
         eventDispatcher.setIncrementalSnapshotChangeEventSource(incrementalSnapshotChangeEventSource);
         incrementalSnapshotChangeEventSource.ifPresent(x -> x.init(partition, offsetContext));
+        // Emit an initial heartbeat once streaming is established so downstream consumers can
+        // observe liveness immediately, without waiting for the first interval to elapse.
+        if (eventDispatcher.heartbeatsEnabled()) {
+            LOGGER.info("Emit the initial heartbeat.");
+            eventDispatcher.alwaysDispatchHeartbeatEvent(partition, offsetContext);
+        }
     }
 
     public void commitOffset(Map<String, ?> partition, Map<String, ?> offset) {
