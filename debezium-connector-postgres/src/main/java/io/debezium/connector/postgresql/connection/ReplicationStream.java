@@ -6,13 +6,15 @@
 
 package io.debezium.connector.postgresql.connection;
 
+import java.sql.SQLException;
+import java.util.concurrent.ExecutorService;
+
+import org.postgresql.replication.PGReplicationStream;
+
 import io.debezium.connector.postgresql.PostgresPartition;
 import io.debezium.pipeline.EventDispatcher;
 import io.debezium.pipeline.spi.OffsetContext;
 import io.debezium.relational.TableId;
-import java.sql.SQLException;
-import java.util.concurrent.ExecutorService;
-import org.postgresql.replication.PGReplicationStream;
 
 /**
  * A stream from which messages sent by a logical decoding plugin can be consumed over a replication

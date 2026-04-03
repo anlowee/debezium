@@ -6,6 +6,20 @@
 
 package io.debezium.connector.postgresql;
 
+import java.sql.SQLException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
+
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.debezium.annotation.NotThreadSafe;
 import io.debezium.config.Configuration;
 import io.debezium.connector.postgresql.PostgresConnectorConfig.LogicalDecoder;
@@ -28,18 +42,6 @@ import io.debezium.relational.history.TableChanges;
 import io.debezium.schema.HistorizedDatabaseSchema;
 import io.debezium.schema.SchemaChangeEvent;
 import io.debezium.spi.topic.TopicNamingStrategy;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Component that records the schema information for the {@link PostgresConnector}. The schema
@@ -69,10 +71,10 @@ public class PostgresSchema extends RelationalDatabaseSchema
      * @param config the connector configuration, which is presumed to be valid
      */
     protected PostgresSchema(
-            PostgresConnectorConfig config,
-            PostgresDefaultValueConverter defaultValueConverter,
-            TopicNamingStrategy<TableId> topicNamingStrategy,
-            PostgresValueConverter valueConverter) {
+                             PostgresConnectorConfig config,
+                             PostgresDefaultValueConverter defaultValueConverter,
+                             TopicNamingStrategy<TableId> topicNamingStrategy,
+                             PostgresValueConverter valueConverter) {
         super(
                 config,
                 topicNamingStrategy,
@@ -90,9 +92,9 @@ public class PostgresSchema extends RelationalDatabaseSchema
     }
 
     private static TableSchemaBuilder getTableSchemaBuilder(
-            PostgresConnectorConfig config,
-            PostgresValueConverter valueConverter,
-            PostgresDefaultValueConverter defaultValueConverter) {
+                                                            PostgresConnectorConfig config,
+                                                            PostgresValueConverter valueConverter,
+                                                            PostgresDefaultValueConverter defaultValueConverter) {
         return new TableSchemaBuilder(
                 valueConverter,
                 defaultValueConverter,
@@ -114,7 +116,8 @@ public class PostgresSchema extends RelationalDatabaseSchema
      * @throws SQLException if there is a problem obtaining the schema from the database server
      */
     protected PostgresSchema refresh(
-            PostgresConnection connection, boolean printReplicaIdentityInfo) throws SQLException {
+                                     PostgresConnection connection, boolean printReplicaIdentityInfo)
+            throws SQLException {
         // read all the information from the DB
         connection.readSchema(tables(), null, null, getTableFilter(), null, true);
         if (printReplicaIdentityInfo) {
@@ -137,7 +140,8 @@ public class PostgresSchema extends RelationalDatabaseSchema
                     tableId,
                     replicaIdentity,
                     replicaIdentity.description());
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             LOGGER.warn("Cannot determine REPLICA IDENTITY info for '{}'", tableId);
         }
     }
@@ -153,10 +157,10 @@ public class PostgresSchema extends RelationalDatabaseSchema
      * @throws SQLException if there is a problem refreshing the schema from the database server
      */
     private void refresh(
-            PostgresConnection connection,
-            TableId tableId,
-            boolean refreshToastableColumns,
-            boolean removeGeneratedColumns)
+                         PostgresConnection connection,
+                         TableId tableId,
+                         boolean refreshToastableColumns,
+                         boolean removeGeneratedColumns)
             throws SQLException {
         Tables temp = new Tables();
         connection.readSchema(temp, null, null, tableId::equals, null, true);
@@ -198,7 +202,7 @@ public class PostgresSchema extends RelationalDatabaseSchema
      * @throws SQLException if there is a problem refreshing the schema from the database server
      */
     protected void refresh(
-            PostgresConnection connection, TableId tableId, boolean refreshToastableColumns)
+                           PostgresConnection connection, TableId tableId, boolean refreshToastableColumns)
             throws SQLException {
         refresh(connection, tableId, refreshToastableColumns, false);
     }
@@ -254,20 +258,18 @@ public class PostgresSchema extends RelationalDatabaseSchema
         // deal.
         List<String> toastableColumns = new ArrayList<>();
         String relName = tableId.table();
-        String schema =
-                tableId.schema() != null && tableId.schema().length() > 0
-                        ? tableId.schema()
-                        : "public";
-        String statement =
-                "select att.attname"
-                        + " from pg_attribute att "
-                        + " join pg_class tbl on tbl.oid = att.attrelid"
-                        + " join pg_namespace ns on tbl.relnamespace = ns.oid"
-                        + " where tbl.relname = ?"
-                        + " and ns.nspname = ?"
-                        + " and att.attnum > 0"
-                        + " and att.attstorage in ('x', 'e', 'm')"
-                        + " and not att.attisdropped;";
+        String schema = tableId.schema() != null && tableId.schema().length() > 0
+                ? tableId.schema()
+                : "public";
+        String statement = "select att.attname"
+                + " from pg_attribute att "
+                + " join pg_class tbl on tbl.oid = att.attrelid"
+                + " join pg_namespace ns on tbl.relnamespace = ns.oid"
+                + " where tbl.relname = ?"
+                + " and ns.nspname = ?"
+                + " and att.attnum > 0"
+                + " and att.attstorage in ('x', 'e', 'm')"
+                + " and not att.attisdropped;";
 
         try {
             connection.prepareQuery(
@@ -284,7 +286,8 @@ public class PostgresSchema extends RelationalDatabaseSchema
             if (!connection.connection().getAutoCommit()) {
                 connection.connection().commit();
             }
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             throw new ConnectException("Unable to refresh toastable columns mapping", e);
         }
 
@@ -402,10 +405,10 @@ class PostgresSchemaHistory implements SchemaHistory {
 
     @Override
     public void configure(
-            Configuration config,
-            HistoryRecordComparator comparator,
-            SchemaHistoryListener listener,
-            boolean useCatalogBeforeSchema) {
+                          Configuration config,
+                          HistoryRecordComparator comparator,
+                          SchemaHistoryListener listener,
+                          boolean useCatalogBeforeSchema) {
         // no-op
     }
 
@@ -416,27 +419,27 @@ class PostgresSchemaHistory implements SchemaHistory {
 
     @Override
     public void record(
-            Map<String, ?> source, Map<String, ?> position, String databaseName, String ddl)
+                       Map<String, ?> source, Map<String, ?> position, String databaseName, String ddl)
             throws SchemaHistoryException {
         // no-op
     }
 
     @Override
     public void record(
-            Map<String, ?> source,
-            Map<String, ?> position,
-            String databaseName,
-            String schemaName,
-            String ddl,
-            TableChanges changes,
-            Instant timestamp)
+                       Map<String, ?> source,
+                       Map<String, ?> position,
+                       String databaseName,
+                       String schemaName,
+                       String ddl,
+                       TableChanges changes,
+                       Instant timestamp)
             throws SchemaHistoryException {
         // no-op
     }
 
     @Override
     public void recover(
-            Map<Map<String, ?>, Map<String, ?>> offsets, Tables schema, DdlParser ddlParser)
+                        Map<Map<String, ?>, Map<String, ?>> offsets, Tables schema, DdlParser ddlParser)
             throws InterruptedException {
         // no-op
     }
